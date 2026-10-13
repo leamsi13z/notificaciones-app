@@ -111,6 +111,7 @@
         </div>
     </div>
 
+        
     <!-- SDKs de Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
@@ -133,6 +134,19 @@
         // URL de tu Google Apps Script
         const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbzbAldIQ61WnzqL-k1lz-D7lQFGtdhnNxbInGQKy6-GBixSPK7whh-LzCBEwGo5v5TA/exec";
 
+        // Registrar el Service Worker automáticamente al cargar la página
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./firebase-messaging-sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker registrado con éxito:', registration.scope);
+                    })
+                    .catch((err) => {
+                        console.log('Fallo al registrar el Service Worker:', err);
+                    });
+            });
+        }
+
         function activarNotificaciones() {
             const statusDiv = document.getElementById('status');
             statusDiv.className = "";
@@ -140,28 +154,25 @@
 
             Notification.requestPermission().then((permission) => {
                 if (permission === 'granted') {
-                    statusDiv.innerText = "Permiso concedido. Registrando dispositivo...";
+                    statusDiv.innerText = "Permiso concedido. Vinculando dispositivo...";
                     
-                    // Se especifica la ruta exacta del Service Worker adaptada a GitHub Pages
-                    navigator.serviceWorker.register('./firebase-messaging-sw.js')
-                        .then((registration) => {
-                            return messaging.getToken({ 
-                                vapidKey: 'BJ4DJJT1eeFJXxQkRvb-nqZdX-Z757Zta6cQawoKEVURo8toaVT-ttWuHxNuLLKkqBnnpbJP-yVEwKfxSnDahbk',
-                                serviceWorkerRegistration: registration
-                            });
-                        })
-                        .then((currentToken) => {
-                            if (currentToken) {
-                                enviarTokenAlServidor(currentToken);
-                            } else {
-                                statusDiv.className = "status-error";
-                                statusDiv.innerText = "No se pudo obtener el token del dispositivo.";
-                            }
-                        })
-                        .catch((err) => {
-                            statusDiv.className = "status-error";
-                            statusDiv.innerText = "Error de registro: " + err;
+                    // Esperamos a que el Service Worker esté listo antes de pedir el token
+                    navigator.serviceWorker.ready.then((registration) => {
+                        return messaging.getToken({ 
+                            vapidKey: 'BJ4DJJT1eeFJXxQkRvb-nqZdX-Z757Zta6cQawoKEVURo8toaVT-ttWuHxNuLLKkqBnnpbJP-yVEwKfxSnDahbk',
+                            serviceWorkerRegistration: registration
                         });
+                    }).then((currentToken) => {
+                        if (currentToken) {
+                            enviarTokenAlServidor(currentToken);
+                        } else {
+                            statusDiv.className = "status-error";
+                            statusDiv.innerText = "No se pudo obtener el token del dispositivo.";
+                        }
+                    }).catch((err) => {
+                        statusDiv.className = "status-error";
+                        statusDiv.innerText = "Error de registro: " + err;
+                    });
                 } else {
                     statusDiv.className = "status-error";
                     statusDiv.innerText = "Permiso de notificaciones denegado por el usuario.";
