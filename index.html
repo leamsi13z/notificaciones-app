@@ -130,7 +130,7 @@
         firebase.initializeApp(firebaseConfig);
         const messaging = firebase.messaging();
 
-        // URL de tu Google Apps Script ya integrada
+        // URL de tu Google Apps Script
         const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbzbAldIQ61WnzqL-k1lz-D7lQFGtdhnNxbInGQKy6-GBixSPK7whh-LzCBEwGo5v5TA/exec";
 
         function activarNotificaciones() {
@@ -142,19 +142,26 @@
                 if (permission === 'granted') {
                     statusDiv.innerText = "Permiso concedido. Registrando dispositivo...";
                     
-                    messaging.getToken({ 
-                        vapidKey: 'BJ4DJJT1eeFJXxQkRvb-nqZdX-Z757Zta6cQawoKEVURo8toaVT-ttWuHxNuLLKkqBnnpbJP-yVEwKfxSnDahbk' 
-                    }).then((currentToken) => {
-                        if (currentToken) {
-                            enviarTokenAlServidor(currentToken);
-                        } else {
+                    // Se especifica la ruta exacta del Service Worker adaptada a GitHub Pages
+                    navigator.serviceWorker.register('./firebase-messaging-sw.js')
+                        .then((registration) => {
+                            return messaging.getToken({ 
+                                vapidKey: 'BJ4DJJT1eeFJXxQkRvb-nqZdX-Z757Zta6cQawoKEVURo8toaVT-ttWuHxNuLLKkqBnnpbJP-yVEwKfxSnDahbk',
+                                serviceWorkerRegistration: registration
+                            });
+                        })
+                        .then((currentToken) => {
+                            if (currentToken) {
+                                enviarTokenAlServidor(currentToken);
+                            } else {
+                                statusDiv.className = "status-error";
+                                statusDiv.innerText = "No se pudo obtener el token del dispositivo.";
+                            }
+                        })
+                        .catch((err) => {
                             statusDiv.className = "status-error";
-                            statusDiv.innerText = "No se pudo obtener el token del dispositivo.";
-                        }
-                    }).catch((err) => {
-                        statusDiv.className = "status-error";
-                        statusDiv.innerText = "Error de registro: " + err;
-                    });
+                            statusDiv.innerText = "Error de registro: " + err;
+                        });
                 } else {
                     statusDiv.className = "status-error";
                     statusDiv.innerText = "Permiso de notificaciones denegado por el usuario.";
