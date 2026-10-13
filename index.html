@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Módulo - Notificaciones Push</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        body {
+            background: #090d16;
+            background-image: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #090d16 80%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 420px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 35px 25px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+        .icon-box {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        .icon-box svg {
+            width: 34px;
+            height: 34px;
+            fill: #ffffff;
+        }
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+        p {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        #status {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            min-height: 24px;
+        }
+        .status-success { color: #4ade80 !important; }
+        .status-error { color: #f87171 !important; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+            <div class="icon-box">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                </svg>
+            </div>
+            <h1>Centro de Alertas</h1>
+            <p>Mantente conectado y recibe avisos en tiempo real con imágenes y novedades directo en tu celular.</p>
+            
+            <button class="btn-primary" onclick="activarNotificaciones()">Activar Notificaciones</button>
+            
+            <div id="status">Esperando acción del usuario...</div>
+        </div>
+    </div>
+
+    <!-- SDKs de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+    
+    <script>
+        // Configuración de Firebase y Clave VAPID integradas
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJ1IXVb_jaQ14rUSymvD57ksUhOakURG0",
+            authDomain: "mimodulonotificaciones.firebaseapp.com",
+            projectId: "mimodulonotificaciones",
+            storageBucket: "mimodulonotificaciones.firebasestorage.app",
+            messagingSenderId: "863251158546",
+            appId: "1:863251158546:web:542340852d4657e4c72acb"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const messaging = firebase.messaging();
+
+        // URL de tu Google Apps Script ya integrada
+        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbzbAldIQ61WnzqL-k1lz-D7lQFGtdhnNxbInGQKy6-GBixSPK7whh-LzCBEwGo5v5TA/exec";
+
+        function activarNotificaciones() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = "";
+            statusDiv.innerText = "Solicitando permisos...";
+
+            Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    statusDiv.innerText = "Permiso concedido. Registrando dispositivo...";
+                    
+                    messaging.getToken({ 
+                        vapidKey: 'BJ4DJJT1eeFJXxQkRvb-nqZdX-Z757Zta6cQawoKEVURo8toaVT-ttWuHxNuLLKkqBnnpbJP-yVEwKfxSnDahbk' 
+                    }).then((currentToken) => {
+                        if (currentToken) {
+                            enviarTokenAlServidor(currentToken);
+                        } else {
+                            statusDiv.className = "status-error";
+                            statusDiv.innerText = "No se pudo obtener el token del dispositivo.";
+                        }
+                    }).catch((err) => {
+                        statusDiv.className = "status-error";
+                        statusDiv.innerText = "Error de registro: " + err;
+                    });
+                } else {
+                    statusDiv.className = "status-error";
+                    statusDiv.innerText = "Permiso de notificaciones denegado por el usuario.";
+                }
+            }).catch((err) => {
+                statusDiv.className = "status-error";
+                statusDiv.innerText = "Error al solicitar permisos: " + err;
+            });
+        }
+
+        function enviarTokenAlServidor(token) {
+            const statusDiv = document.getElementById('status');
+            
+            fetch(URL_GOOGLE_SCRIPT, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ token: token })
+            }).then(() => {
+                statusDiv.className = "status-success";
+                statusDiv.innerText = "¡Dispositivo vinculado con éxito a la hoja de cálculo!";
+            }).catch(error => {
+                statusDiv.className = "status-error";
+                statusDiv.innerText = "Error al enviar token al servidor.";
+            });
+        }
+    </script>
+</body>
+</html>
