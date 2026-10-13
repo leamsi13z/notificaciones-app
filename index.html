@@ -88,6 +88,7 @@
             font-size: 0.85rem;
             color: #cbd5e1;
             min-height: 24px;
+            word-break: break-all;
         }
         .status-success { color: #4ade80 !important; }
         .status-error { color: #f87171 !important; }
@@ -111,13 +112,12 @@
         </div>
     </div>
 
-        
     <!-- SDKs de Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
     
     <script>
-        // Configuración de Firebase y Clave VAPID integradas
+        // Configuración de tu proyecto Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCJ1IXVb_jaQ14rUSymvD57ksUhOakURG0",
             authDomain: "mimodulonotificaciones.firebaseapp.com",
@@ -127,25 +127,29 @@
             appId: "1:863251158546:web:542340852d4657e4c72acb"
         };
 
-        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const messaging = firebase.messaging();
 
-        // URL de tu Google Apps Script
         const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbzbAldIQ61WnzqL-k1lz-D7lQFGtdhnNxbInGQKy6-GBixSPK7whh-LzCBEwGo5v5TA/exec";
 
-        // Registrar el Service Worker automáticamente al cargar la página
+        // Registro automático del Service Worker con manejo de espera (.ready)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./firebase-messaging-sw.js')
                     .then((registration) => {
-                        console.log('Service Worker registrado con éxito:', registration.scope);
+                        console.log('Service Worker preparado:', registration.scope);
                     })
                     .catch((err) => {
-                        console.log('Fallo al registrar el Service Worker:', err);
+                        console.error('Error al iniciar Service Worker:', err);
                     });
             });
         }
+
+        // Mostrar alerta si la notificación llega con la aplicación abierta
+        messaging.onMessage((payload) => {
+            console.log('Notificación en primer plano:', payload);
+            alert(`🔔 ${payload.notification.title}\n${payload.notification.body}`);
+        });
 
         function activarNotificaciones() {
             const statusDiv = document.getElementById('status');
@@ -154,9 +158,9 @@
 
             Notification.requestPermission().then((permission) => {
                 if (permission === 'granted') {
-                    statusDiv.innerText = "Permiso concedido. Vinculando dispositivo...";
+                    statusDiv.innerText = "Permiso concedido. Obteniendo token...";
                     
-                    // Esperamos a que el Service Worker esté listo antes de pedir el token
+                    // Espera estricta a que el Service Worker esté activo
                     navigator.serviceWorker.ready.then((registration) => {
                         return messaging.getToken({ 
                             vapidKey: 'BJ4DJJT1eeFJXxQkRvb-nqZdX-Z757Zta6cQawoKEVURo8toaVT-ttWuHxNuLLKkqBnnpbJP-yVEwKfxSnDahbk',
@@ -167,11 +171,11 @@
                             enviarTokenAlServidor(currentToken);
                         } else {
                             statusDiv.className = "status-error";
-                            statusDiv.innerText = "No se pudo obtener el token del dispositivo.";
+                            statusDiv.innerText = "No se pudo generar el token del dispositivo.";
                         }
                     }).catch((err) => {
                         statusDiv.className = "status-error";
-                        statusDiv.innerText = "Error de registro: " + err;
+                        statusDiv.innerText = "Error al obtener token: " + err;
                     });
                 } else {
                     statusDiv.className = "status-error";
@@ -179,7 +183,7 @@
                 }
             }).catch((err) => {
                 statusDiv.className = "status-error";
-                statusDiv.innerText = "Error al solicitar permisos: " + err;
+                statusDiv.innerText = "Error en permisos: " + err;
             });
         }
 
@@ -198,7 +202,7 @@
                 statusDiv.innerText = "¡Dispositivo vinculado con éxito a la hoja de cálculo!";
             }).catch(error => {
                 statusDiv.className = "status-error";
-                statusDiv.innerText = "Error al enviar token al servidor.";
+                statusDiv.innerText = "Error enviando token a Google Sheets.";
             });
         }
     </script>
